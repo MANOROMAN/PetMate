@@ -6,14 +6,18 @@ import {
   TouchableOpacity, 
   StyleSheet, 
   Image,
-  Alert 
+  Alert,
+  ActivityIndicator
 } from 'react-native';
 import { Formik } from 'formik';
 import * as Yup from 'yup';
 import { loginUser } from '../../services/authService';
+import { useDispatch } from 'react-redux';
+import { setUser, setLoading, setError } from '../../store/authSlice';
 
 const LoginScreen = ({ navigation }) => {
   const [isLoading, setIsLoading] = useState(false);
+  const dispatch = useDispatch();
 
   const LoginSchema = Yup.object().shape({
     email: Yup.string()
@@ -26,14 +30,34 @@ const LoginScreen = ({ navigation }) => {
 
   const handleLogin = async (values) => {
     setIsLoading(true);
+    dispatch(setLoading(true));
     try {
       const user = await loginUser(values.email, values.password);
+      
+      // Redux state'i güncelle
+      dispatch(setUser(user));
+      
       // Başarılı giriş sonrası işlemler
       navigation.replace('Main');
     } catch (error) {
-      Alert.alert('Giriş Hatası', error.message);
+      // Hata mesajını anlaşılır şekilde göster
+      let errorMessage = 'Giriş yapılırken bir hata oluştu';
+      
+      if (error.code === 'auth/user-not-found') {
+        errorMessage = 'Bu email adresine sahip bir kullanıcı bulunamadı';
+      } else if (error.code === 'auth/wrong-password') {
+        errorMessage = 'Hatalı şifre girdiniz';
+      } else if (error.code === 'auth/invalid-email') {
+        errorMessage = 'Geçersiz email adresi';
+      } else if (error.code === 'auth/too-many-requests') {
+        errorMessage = 'Çok fazla başarısız giriş denemesi. Lütfen daha sonra tekrar deneyin';
+      }
+      
+      Alert.alert('Giriş Hatası', errorMessage);
+      dispatch(setError(errorMessage));
     }
     setIsLoading(false);
+    dispatch(setLoading(false));
   };
 
   return (
@@ -94,9 +118,11 @@ const LoginScreen = ({ navigation }) => {
               onPress={handleSubmit}
               disabled={isLoading}
             >
-              <Text style={styles.loginButtonText}>
-                {isLoading ? 'Giriş Yapılıyor...' : 'Giriş Yap'}
-              </Text>
+              {isLoading ? (
+                <ActivityIndicator size="small" color="white" />
+              ) : (
+                <Text style={styles.loginButtonText}>Giriş Yap</Text>
+              )}
             </TouchableOpacity>
           </View>
         )}
@@ -181,98 +207,3 @@ const styles = StyleSheet.create({
 });
 
 export default LoginScreen;
-```
-
-6. Ana Navigasyon (`src/navigation/AppNavigator.js`):
-
-<antArtifact identifier="app-navigator" type="application/vnd.ant.code" language="javascript" title="Ana Navigasyon">
-import React, { useState, useEffect } from 'react';
-import { NavigationContainer } from '@react-navigation/native';
-import { createStackNavigator } from '@react-navigation/stack';
-import { onAuthStateChanged } from 'firebase/auth';
-import { auth } from '../services/firebaseConfig';
-
-// Import Ekranları
-import LoginScreen from '../screens/auth/LoginScreen';
-import RegisterScreen from '../screens/auth/RegisterScreen';
-import MainScreen from '../screens/main/MainScreen';
-import ProfileCreateScreen from '../screens/main/ProfileCreateScreen';
-
-const Stack = createStackNavigator();
-
-const AppNavigator = () => {
-  const [initializing, setInitializing] = useState(true);
-  const [user, setUser] = useState(null);
-
-  useEffect(() => {
-    const subscriber = onAuthStateChanged(auth, (currentUser) => {
-      setUser(currentUser);
-      if (initializing) setInitializing(false);
-    });
-
-    // Aboneliği temizle
-    return subscriber;
-  }, []);
-
-  if (initializing) return null;
-
-  return (
-    <NavigationContainer>
-      <Stack.Navigator 
-        screenOptions={{ 
-          headerStyle: { backgroundColor: '#4CAF50' },
-          headerTintColor: 'white'
-        }}
-      >
-        {user ? (
-          // Kullanıcı giriş yapmışsa
-          <>
-            <Stack.Screen 
-              name="Main" 
-              component={MainScreen} 
-              options={{ title: 'PetMate' }}
-            />
-            <Stack.Screen 
-              name="ProfileCreate" 
-              component={ProfileCreateScreen} 
-              options={{ title: 'Profil Oluştur' }}
-            />
-          </>
-        ) : (
-          // Kullanıcı giriş yapmamışsa
-          <>
-            <Stack.Screen 
-              name="Login" 
-              component={LoginScreen} 
-              options={{ headerShown: false }}
-            />
-            <Stack.Screen 
-              name="Register" 
-              component={RegisterScreen} 
-              options={{ title: 'Kayıt Ol' }}
-            />
-          </>
-        )}
-      </Stack.Navigator>
-    </NavigationContainer>
-  );
-};
-
-export default AppNavigator;
-```
-
-7. `App.js` Güncelleme:
-
-<antArtifact identifier="app-js" type="application/vnd.ant.code" language="javascript" title="Ana Uygulama Bileşeni">
-import React from 'react';
-import { Provider } from 'react-redux';
-import { store } from './src/store/store';
-import AppNavigator from './src/navigation/AppNavigator';
-
-export default function App() {
-  return (
-    <Provider store={store}>
-      <AppNavigator />
-    </Provider>
-  );
-}

@@ -6,14 +6,18 @@ import {
   TouchableOpacity, 
   StyleSheet, 
   ScrollView,
-  Alert 
+  Alert,
+  ActivityIndicator
 } from 'react-native';
 import { Formik } from 'formik';
 import * as Yup from 'yup';
 import { registerUser } from '../../services/authService';
+import { useDispatch } from 'react-redux';
+import { setUser, setLoading, setError } from '../../store/authSlice';
 
 const RegisterScreen = ({ navigation }) => {
   const [isLoading, setIsLoading] = useState(false);
+  const dispatch = useDispatch();
 
   const RegisterSchema = Yup.object().shape({
     name: Yup.string()
@@ -37,6 +41,7 @@ const RegisterScreen = ({ navigation }) => {
 
   const handleRegister = async (values) => {
     setIsLoading(true);
+    dispatch(setLoading(true));
     try {
       const user = await registerUser(
         values.email, 
@@ -44,6 +49,9 @@ const RegisterScreen = ({ navigation }) => {
         values.name, 
         values.userType
       );
+      
+      // Redux state'i güncelle
+      dispatch(setUser(user));
       
       Alert.alert(
         'Kayıt Başarılı', 
@@ -54,9 +62,22 @@ const RegisterScreen = ({ navigation }) => {
         }]
       );
     } catch (error) {
-      Alert.alert('Kayıt Hatası', error.message);
+      // Hata mesajını anlaşılır şekilde göster
+      let errorMessage = 'Kayıt yapılırken bir hata oluştu';
+      
+      if (error.code === 'auth/email-already-in-use') {
+        errorMessage = 'Bu email adresi zaten kullanılıyor';
+      } else if (error.code === 'auth/invalid-email') {
+        errorMessage = 'Geçersiz email adresi';
+      } else if (error.code === 'auth/weak-password') {
+        errorMessage = 'Zayıf şifre. Lütfen daha güçlü bir şifre seçin';
+      }
+      
+      Alert.alert('Kayıt Hatası', errorMessage);
+      dispatch(setError(errorMessage));
     }
     setIsLoading(false);
+    dispatch(setLoading(false));
   };
 
   return (
@@ -157,7 +178,14 @@ const RegisterScreen = ({ navigation }) => {
                 ]}
                 onPress={() => setFieldValue('userType', 'petOwner')}
               >
-                <Text style={styles.userTypeButtonText}>Hayvan Sahibi</Text>
+                <Text 
+                  style={[
+                    styles.userTypeButtonText,
+                    values.userType === 'petOwner' && styles.selectedUserTypeButtonText
+                  ]}
+                >
+                  Hayvan Sahibi
+                </Text>
               </TouchableOpacity>
               <TouchableOpacity
                 style={[
@@ -166,7 +194,14 @@ const RegisterScreen = ({ navigation }) => {
                 ]}
                 onPress={() => setFieldValue('userType', 'veterinarian')}
               >
-                <Text style={styles.userTypeButtonText}>Veteriner</Text>
+                <Text 
+                  style={[
+                    styles.userTypeButtonText,
+                    values.userType === 'veterinarian' && styles.selectedUserTypeButtonText
+                  ]}
+                >
+                  Veteriner
+                </Text>
               </TouchableOpacity>
             </View>
             {touched.userType && errors.userType && (
@@ -179,9 +214,11 @@ const RegisterScreen = ({ navigation }) => {
               onPress={handleSubmit}
               disabled={isLoading}
             >
-              <Text style={styles.registerButtonText}>
-                {isLoading ? 'Kayıt Yapılıyor...' : 'Kayıt Ol'}
-              </Text>
+              {isLoading ? (
+                <ActivityIndicator size="small" color="white" />
+              ) : (
+                <Text style={styles.registerButtonText}>Kayıt Ol</Text>
+              )}
             </TouchableOpacity>
           </View>
         )}
@@ -249,6 +286,10 @@ const styles = StyleSheet.create({
     color: '#4CAF50',
     fontWeight: 'bold'
   },
+  selectedUserTypeButtonText: {
+    color: 'white',
+    fontWeight: 'bold'
+  },
   registerButton: {
     backgroundColor: '#4CAF50',
     padding: 15,
@@ -270,185 +311,3 @@ const styles = StyleSheet.create({
 });
 
 export default RegisterScreen;
-```
-
-2. Şifremi Unuttum Ekranı (`src/screens/auth/ForgotPasswordScreen.js`):
-
-<antArtifact identifier="forgot-password-screen" type="application/vnd.ant.code" language="javascript" title="Şifremi Unuttum Ekranı">
-import React, { useState } from 'react';
-import { 
-  View, 
-  Text, 
-  TextInput, 
-  TouchableOpacity, 
-  StyleSheet, 
-  Alert 
-} from 'react-native';
-import { Formik } from 'formik';
-import * as Yup from 'yup';
-import { resetPassword } from '../../services/authService';
-
-const ForgotPasswordScreen = ({ navigation }) => {
-  const [isLoading, setIsLoading] = useState(false);
-
-  const ForgotPasswordSchema = Yup.object().shape({
-    email: Yup.string()
-      .email('Geçersiz email adresi')
-      .required('Email gerekli')
-  });
-
-  const handleResetPassword = async (values) => {
-    setIsLoading(true);
-    try {
-      await resetPassword(values.email);
-      Alert.alert(
-        'Şifre Sıfırlama', 
-        'Şifre sıfırlama bağlantısı email adresinize gönderildi.',
-        [{ 
-          text: 'Tamam', 
-          onPress: () => navigation.navigate('Login') 
-        }]
-      );
-    } catch (error) {
-      Alert.alert('Hata', error.message);
-    }
-    setIsLoading(false);
-  };
-
-  return (
-    <View style={styles.container}>
-      <Text style={styles.title}>Şifremi Unuttum</Text>
-      <Text style={styles.subtitle}>
-        Şifre sıfırlama bağlantısı için email adresinizi girin
-      </Text>
-
-      <Formik
-        initialValues={{ email: '' }}
-        validationSchema={ForgotPasswordSchema}
-        onSubmit={handleResetPassword}
-      >
-        {({ 
-          handleChange, 
-          handleBlur, 
-          handleSubmit, 
-          values, 
-          errors, 
-          touched 
-        }) => (
-          <View style={styles.formContainer}>
-            <TextInput
-              style={[
-                styles.input, 
-                touched.email && errors.email && styles.inputError
-              ]}
-              placeholder="E-posta Adresi"
-              onChangeText={handleChange('email')}
-              onBlur={handleBlur('email')}
-              value={values.email}
-              keyboardType="email-address"
-              autoCapitalize="none"
-            />
-            {touched.email && errors.email && (
-              <Text style={styles.errorText}>{errors.email}</Text>
-            )}
-
-            <TouchableOpacity 
-              style={styles.resetButton}
-              onPress={handleSubmit}
-              disabled={isLoading}
-            >
-              <Text style={styles.resetButtonText}>
-                {isLoading ? 'Gönderiliyor...' : 'Şifre Sıfırlama Bağlantısı Gönder'}
-              </Text>
-            </TouchableOpacity>
-          </View>
-        )}
-      </Formik>
-
-      <View style={styles.loginContainer}>
-        <Text>Hatırladınız mı? </Text>
-        <TouchableOpacity onPress={() => navigation.navigate('Login')}>
-          <Text style={styles.loginText}>Giriş Yap</Text>
-        </TouchableOpacity>
-      </View>
-    </View>
-  );
-};
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#F5FCFF',
-    alignItems: 'center',
-    justifyContent: 'center',
-    padding: 20
-  },
-  title: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    marginBottom: 10
-  },
-  subtitle: {
-    fontSize: 16,
-    color: 'gray',
-    marginBottom: 20,
-    textAlign: 'center'
-  },
-  formContainer: {
-    width: '100%'
-  },
-  input: {
-    backgroundColor: 'white',
-    borderWidth: 1,
-    borderColor: '#ddd',
-    borderRadius: 8,
-    padding: 15,
-    marginBottom: 15
-  },
-  inputError: {
-    borderColor: 'red'
-  },
-  errorText: {
-    color: 'red',
-    marginBottom: 10
-  },
-  resetButton: {
-    backgroundColor: '#4CAF50',
-    padding: 15,
-    borderRadius: 8,
-    alignItems: 'center'
-  },
-  resetButtonText: {
-    color: 'white',
-    fontWeight: 'bold'
-  },
-  loginContainer: {
-    flexDirection: 'row',
-    marginTop: 20
-  },
-  loginText: {
-    color: '#4CAF50',
-    fontWeight: 'bold'
-  }
-});
-
-export default ForgotPasswordScreen;
-```
-
-3. Redux Store Kurulumu (`src/store/store.js`):
-
-<antArtifact identifier="redux-store" type="application/vnd.ant.code" language="javascript" title="Redux Store Yapılandırması">
-import { configureStore } from '@reduxjs/toolkit';
-import authReducer from './authSlice';
-import petReducer from './petSlice';
-
-export const store = configureStore({
-  reducer: {
-    auth: authReducer,
-    pets: petReducer
-  },
-  middleware: (getDefaultMiddleware) => 
-    getDefaultMiddleware({
-      serializableCheck: false
-    })
-});
