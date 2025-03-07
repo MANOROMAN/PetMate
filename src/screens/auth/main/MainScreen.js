@@ -11,10 +11,10 @@ import {
 } from 'react-native';
 import { useSelector, useDispatch } from 'react-redux';
 import { signOut } from 'firebase/auth';
-import { auth } from '../../services/firebaseConfig';
-import { logout } from '../../store/authSlice';
-import { setUserPets, setRecommendedPets } from '../../store/petSlice';
-import PetCard from '../../components/PetCard';
+import { auth } from '../../../services/firebaseConfig';
+import { logout } from '../../../store/authSlice';
+import { setUserPets, setRecommendedPets } from '../../../store/petSlice';
+import PetCard from '../../../components/PetCard';
 
 // Örnek veri
 const DUMMY_PETS = [
@@ -227,4 +227,87 @@ const styles = StyleSheet.create({
   loadingContainer: {
     alignItems: 'center'
   },
-  loadingText:
+  loadingText: {
+    marginTop: 10,
+    fontSize: 16,
+    color: '#666'
+  },
+  emptyContainer: {
+    alignItems: 'center',
+    justifyContent: 'center'
+  },
+  emptyText: {
+    fontSize: 16,
+    color: '#666',
+    marginBottom: 20
+  },
+  addPetButton: {
+    backgroundColor: '#4CAF50',
+    paddingVertical: 12,
+    paddingHorizontal: 20,
+    borderRadius: 8
+  },
+  addPetButtonText: {
+    color: 'white',
+    fontWeight: 'bold'
+  },
+  refreshButton: {
+    backgroundColor: '#2196F3',
+    paddingVertical: 12,
+    paddingHorizontal: 20,
+    borderRadius: 8
+  },
+  refreshButtonText: {
+    color: 'white',
+    fontWeight: 'bold'
+  },
+  cardContainer: {
+    width: '100%',
+    alignItems: 'center'
+  },
+  actionButtons: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    width: '60%',
+    marginTop: 20
+  },
+  actionButton: {
+    width: 60,
+    height: 60,
+    borderRadius: 30,
+    justifyContent: 'center',
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 3.84,
+    elevation: 5
+  },
+  dislikeButton: {
+    backgroundColor: '#FF6347'
+  },
+  likeButton: {
+    backgroundColor: '#4CAF50'
+  },
+  actionButtonText: {
+    fontSize: 24,
+    color: 'white'
+  },
+  footer: {
+    flexDirection: 'row',
+    justifyContent: 'space-around',
+    padding: 15,
+    borderTopWidth: 1,
+    borderTopColor: '#ddd',
+    backgroundColor: 'white'
+  },
+  footerButton: {
+    padding: 10
+  },
+  footerButtonText: {
+    color: '#4CAF50',
+    fontWeight: 'bold'
+  }
+});
+
+export default MainScreen;
